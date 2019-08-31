@@ -1,4 +1,4 @@
-# on-fleek
+# on:fleek
 Automated installation script for the FLEEK stack (Filebeat, Logstash, Elasticsearch, Elastic APM Server and Kibana) on Ubuntu 18.04 (bionic).
 
 Produced for a sydjango meetup talk concentrating on Elastic APM, `on-fleek` installs the entire FLEEK stack on any Ubuntu 18.04 installation with little user input.
