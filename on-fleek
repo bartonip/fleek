@@ -9,8 +9,8 @@ echo "=== https://github.com/bartonip/install-elastic-apm ==="
 echo
 
 function exit_badly {
-  echo $1
-  exit 1
+echo $1
+exit 1
 }
 
 [[ $(lsb_release -rs) == "18.04" ]] || exit_badly "This script is for Ubuntu 18.04 only, aborting (if you know what you're doing, delete this check)."
@@ -23,7 +23,9 @@ wget -qO - https://artifacts.elastic.co/GPG-KEY-elasticsearch | sudo apt-key add
 echo "deb https://artifacts.elastic.co/packages/6.x/apt stable main" >  /etc/apt/sources.list.d/elastic-6.x.list
 
 apt update
-apt install -y default-jdk elasticsearch=6.7.2 kibana=6.7.2 logstash=1:6.7.2-1 filebeat=6.7.2 apm-server=6.7.2 nginx certbot python-certbot-nginx
+apt install -y openjdk-11-jre 
+apt install -y elasticsearch=6.7.2 kibana=6.7.2 logstash=1:6.7.2-1 filebeat=6.7.2 apm-server=6.7.2 
+apt install -y nginx certbot python-certbot-nginx
 
 sysctl -w vm.max_map_count=262144
 echo 'vm.max_map_count=262144' >> /etc/sysctl.conf
@@ -52,13 +54,6 @@ echo "${KIBANA_USERNAME}:`openssl passwd -apr1`" >> /etc/nginx/htpasswd.users
 read -p "FQDN for Kibana (default:${DEFAULT_FQDN}): " FQDN
 FQDN=${FQDN:-$DEFAULT_FQDN}
 
-echo
-echo "--- Configuring RSA certificates ---"
-echo
-
-certbot --nginx --redirect --noninteractive  --agree-tos --register-unsafely-without-email -d ${FQDN}
-(crontab -l 2>/dev/null; echo "43 6 * * * certbot renew --post-hook "systemctl reload nginx"") | crontab -
-
 echo  "
 server {
     listen 80;
@@ -81,62 +76,69 @@ server {
 
 ln -s -f /etc/nginx/sites-available/${FQDN}.conf /etc/nginx/sites-enabled/${FQDN}.conf
 
+echo
+echo "--- Configuring RSA certificates ---"
+echo
+
+certbot --nginx --redirect --noninteractive  --agree-tos --register-unsafely-without-email -d ${FQDN}
+(crontab -l 2>/dev/null; echo "43 6 * * * certbot renew --post-hook "systemctl reload nginx"") | crontab -
+
 systemctl restart nginx
 
 echo '
-   input {
-  beats {
+input {
+beats {
     port => 5044
-  }
+}
 }
 ' > /etc/logstash/conf.d/02-beats-input.conf
 
 echo '
 filter {
-  if [fileset][module] == "system" {
+if [fileset][module] == "system" {
     if [fileset][name] == "auth" {
-      grok {
+    grok {
         match => { "message" => ["%{SYSLOGTIMESTAMP:[system][auth][timestamp]} %{SYSLOGHOST:[system][auth][hostname]} sshd(?:\[%{POSINT:[system][auth][pid]}\])?: %{DATA:[system][auth][ssh][event]} %{DATA:[system][auth][ssh][method]} for (invalid user )?%{DATA:[system][auth][user]} from %{IPORHOST:[system][auth][ssh][ip]} port %{NUMBER:[system][auth][ssh][port]} ssh2(: %{GREEDYDATA:[system][auth][ssh][signature]})?",
-                  "%{SYSLOGTIMESTAMP:[system][auth][timestamp]} %{SYSLOGHOST:[system][auth][hostname]} sshd(?:\[%{POSINT:[system][auth][pid]}\])?: %{DATA:[system][auth][ssh][event]} user %{DATA:[system][auth][user]} from %{IPORHOST:[system][auth][ssh][ip]}",
-                  "%{SYSLOGTIMESTAMP:[system][auth][timestamp]} %{SYSLOGHOST:[system][auth][hostname]} sshd(?:\[%{POSINT:[system][auth][pid]}\])?: Did not receive identification string from %{IPORHOST:[system][auth][ssh][dropped_ip]}",
-                  "%{SYSLOGTIMESTAMP:[system][auth][timestamp]} %{SYSLOGHOST:[system][auth][hostname]} sudo(?:\[%{POSINT:[system][auth][pid]}\])?: \s*%{DATA:[system][auth][user]} :( %{DATA:[system][auth][sudo][error]} ;)? TTY=%{DATA:[system][auth][sudo][tty]} ; PWD=%{DATA:[system][auth][sudo][pwd]} ; USER=%{DATA:[system][auth][sudo][user]} ; COMMAND=%{GREEDYDATA:[system][auth][sudo][command]}",
-                  "%{SYSLOGTIMESTAMP:[system][auth][timestamp]} %{SYSLOGHOST:[system][auth][hostname]} groupadd(?:\[%{POSINT:[system][auth][pid]}\])?: new group: name=%{DATA:system.auth.groupadd.name}, GID=%{NUMBER:system.auth.groupadd.gid}",
-                  "%{SYSLOGTIMESTAMP:[system][auth][timestamp]} %{SYSLOGHOST:[system][auth][hostname]} useradd(?:\[%{POSINT:[system][auth][pid]}\])?: new user: name=%{DATA:[system][auth][user][add][name]}, UID=%{NUMBER:[system][auth][user][add][uid]}, GID=%{NUMBER:[system][auth][user][add][gid]}, home=%{DATA:[system][auth][user][add][home]}, shell=%{DATA:[system][auth][user][add][shell]}$",
-                  "%{SYSLOGTIMESTAMP:[system][auth][timestamp]} %{SYSLOGHOST:[system][auth][hostname]} %{DATA:[system][auth][program]}(?:\[%{POSINT:[system][auth][pid]}\])?: %{GREEDYMULTILINE:[system][auth][message]}"] }
+                "%{SYSLOGTIMESTAMP:[system][auth][timestamp]} %{SYSLOGHOST:[system][auth][hostname]} sshd(?:\[%{POSINT:[system][auth][pid]}\])?: %{DATA:[system][auth][ssh][event]} user %{DATA:[system][auth][user]} from %{IPORHOST:[system][auth][ssh][ip]}",
+                "%{SYSLOGTIMESTAMP:[system][auth][timestamp]} %{SYSLOGHOST:[system][auth][hostname]} sshd(?:\[%{POSINT:[system][auth][pid]}\])?: Did not receive identification string from %{IPORHOST:[system][auth][ssh][dropped_ip]}",
+                "%{SYSLOGTIMESTAMP:[system][auth][timestamp]} %{SYSLOGHOST:[system][auth][hostname]} sudo(?:\[%{POSINT:[system][auth][pid]}\])?: \s*%{DATA:[system][auth][user]} :( %{DATA:[system][auth][sudo][error]} ;)? TTY=%{DATA:[system][auth][sudo][tty]} ; PWD=%{DATA:[system][auth][sudo][pwd]} ; USER=%{DATA:[system][auth][sudo][user]} ; COMMAND=%{GREEDYDATA:[system][auth][sudo][command]}",
+                "%{SYSLOGTIMESTAMP:[system][auth][timestamp]} %{SYSLOGHOST:[system][auth][hostname]} groupadd(?:\[%{POSINT:[system][auth][pid]}\])?: new group: name=%{DATA:system.auth.groupadd.name}, GID=%{NUMBER:system.auth.groupadd.gid}",
+                "%{SYSLOGTIMESTAMP:[system][auth][timestamp]} %{SYSLOGHOST:[system][auth][hostname]} useradd(?:\[%{POSINT:[system][auth][pid]}\])?: new user: name=%{DATA:[system][auth][user][add][name]}, UID=%{NUMBER:[system][auth][user][add][uid]}, GID=%{NUMBER:[system][auth][user][add][gid]}, home=%{DATA:[system][auth][user][add][home]}, shell=%{DATA:[system][auth][user][add][shell]}$",
+                "%{SYSLOGTIMESTAMP:[system][auth][timestamp]} %{SYSLOGHOST:[system][auth][hostname]} %{DATA:[system][auth][program]}(?:\[%{POSINT:[system][auth][pid]}\])?: %{GREEDYMULTILINE:[system][auth][message]}"] }
         pattern_definitions => {
-          "GREEDYMULTILINE"=> "(.|\n)*"
+        "GREEDYMULTILINE"=> "(.|\n)*"
         }
         remove_field => "message"
-      }
-      date {
+    }
+    date {
         match => [ "[system][auth][timestamp]", "MMM  d HH:mm:ss", "MMM dd HH:mm:ss" ]
-      }
-      geoip {
+    }
+    geoip {
         source => "[system][auth][ssh][ip]"
         target => "[system][auth][ssh][geoip]"
-      }
+    }
     }
     else if [fileset][name] == "syslog" {
-      grok {
+    grok {
         match => { "message" => ["%{SYSLOGTIMESTAMP:[system][syslog][timestamp]} %{SYSLOGHOST:[system][syslog][hostname]} %{DATA:[system][syslog][program]}(?:\[%{POSINT:[system][syslog][pid]}\])?: %{GREEDYMULTILINE:[system][syslog][message]}"] }
         pattern_definitions => { "GREEDYMULTILINE" => "(.|\n)*" }
         remove_field => "message"
-      }
-      date {
-        match => [ "[system][syslog][timestamp]", "MMM  d HH:mm:ss", "MMM dd HH:mm:ss" ]
-      }
     }
-  }
+    date {
+        match => [ "[system][syslog][timestamp]", "MMM  d HH:mm:ss", "MMM dd HH:mm:ss" ]
+    }
+    }
+}
 }
 ' > /etc/logstash/conf.d/10-syslog-filter.conf
 
 echo '
 output {
-  elasticsearch {
+elasticsearch {
     hosts => ["localhost:9200"]
     manage_template => false
     index => "%{[@metadata][beat]}-%{[@metadata][version]}-%{+YYYY.MM.dd}"
-  }
+}
 }
 ' > /etc/logstash/conf.d/30-elasticsearch-output.conf
 
@@ -148,6 +150,8 @@ sed -e '/\["localhost:9200"\]/ s/^#*/#/' -i /etc/filebeat/filebeat.yml
 
 sed -i 's/#output.logstash:/output.logstash:/g' /etc/filebeat/filebeat.yml
 sed -i 's/#hosts: ["localhost:5044"]/hosts: ["localhost:5044"]/g' /etc/filebeat/filebeat.yml
+
+sleep 15
 
 filebeat modules enable system
 filebeat modules list
@@ -163,4 +167,3 @@ sed -i 's/host: "localhost:8200"/host: "0.0.0.0:8200"/g' /etc/apm-server/apm-ser
 apm-server setup
 systemctl enable apm-server
 systemctl restart apm-server
-
