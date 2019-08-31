@@ -1,11 +1,11 @@
 #!/bin/bash
 
-# github.com/bartonip/install-elastic-apm
+# github.com/bartonip/on-fleek
 # Copyright (c) 2019 Barton Ip
 # Released under the MIT licence: http://opensource.org/licenses/mit-license
 
 echo
-echo "=== https://github.com/bartonip/install-elastic-apm ==="
+echo "=== https://github.com/bartonip/on-fleek ==="
 echo
 
 function exit_badly {
