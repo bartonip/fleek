@@ -28,10 +28,10 @@ This script installs OpenJDK 11 and the FLEEK stack. As an added bonus, Kibana i
 The installation is mostly unattended with the exception of the entry of a username/password for Kibana and FQDN for the SSL Certificate. 
 
 ## What ports are the services on?
-**F**ilebeat: No port as it listens for files.
-**L**ogstash: 0.0.0.0:5040 [TCP]
-**E**lasticsearch: localhost:9200 [TCP]
-**E**lastic APM Server: 0.0.0.0:8200 [TCP]
+**F**ilebeat: No port as it listens for files.<br>
+**L**ogstash: 0.0.0.0:5040 [TCP]<br>
+**E**lasticsearch: localhost:9200 [TCP]<br>
+**E**lastic APM Server: 0.0.0.0:8200 [TCP]<br>
 **K**ibana: localhost:5060 [TCP], proxied by nginx on 0.0.0.0:80/443 [TCP]
 
 ## Where to from here?
