@@ -57,6 +57,7 @@ echo "--- Configuring RSA certificates ---"
 echo
 
 certbot --nginx --redirect --noninteractive  --agree-tos --register-unsafely-without-email -d ${FQDN}
+(crontab -l 2>/dev/null; echo "43 6 * * * certbot renew --post-hook "systemctl reload nginx"") | crontab -
 
 echo  "
 server {
