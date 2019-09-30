@@ -24,6 +24,9 @@ echo "deb https://artifacts.elastic.co/packages/6.x/apt stable main" >  /etc/apt
 
 apt update
 apt install -y openjdk-11-jre 
+
+export JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64/
+
 apt install -y elasticsearch=6.7.2 kibana=6.7.2 logstash=1:6.7.2-1 filebeat=6.7.2 apm-server=6.7.2 
 apt install -y nginx certbot python-certbot-nginx
 
